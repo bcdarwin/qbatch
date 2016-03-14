@@ -12,5 +12,5 @@ setup(
     url="https://github.com/pipitone/qbatch",
     scripts=["bin/qbatch", "bin/pbs_jobnames"],
     long_description=open('README.md').read(),
-    setup_requires=['nose>=1.0'],
+    setup_requires=['nose>=1.0', 'mock'],
 )

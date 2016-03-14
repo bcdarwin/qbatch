@@ -1,9 +1,11 @@
+import mock
 from os.path import join, exists
 import os
 import shutil
 import shlex
 from subprocess import Popen, PIPE
 import tempfile
+import nose
 
 tempdir = None
 
@@ -104,3 +106,40 @@ def test_run_qbatch_local_piped_commands():
 
     assert p.returncode == 0, err
     assert out == expected, out
+
+
+@mock.patch("subprocess.check_output")
+def test_pbs_find_jobs_match(mock_check_output):
+    import qbatch.core
+
+    mock_check_output.return_value = """
+    <Data>
+      <Job><Job_Id>1</Job_Id><Job_Name>test1</Job_Name></Job>
+      <Job><Job_Id>2</Job_Id><Job_Name>ignoreme</Job_Name></Job>
+      <Job><Job_Id>3</Job_Id><Job_Name>test3</Job_Name></Job>
+    </Data>
+    """
+
+    jobs = qbatch.core.pbs_find_jobs(["*"])
+    assert set(['1', '2', '3']) == set(jobs), jobs
+
+    jobs = qbatch.core.pbs_find_jobs(["test*"])
+    assert set(['1', '3']) == set(jobs), jobs
+
+    jobs = qbatch.core.pbs_find_jobs(["no-match"])
+    assert set() == set(jobs), jobs
+
+    jobs = qbatch.core.pbs_find_jobs(["test*", "ignore*"])
+    assert set(['1', '2', '3']) == set(jobs), jobs
+
+
+@nose.tools.raises(Exception)
+@mock.patch("subprocess.check_output")
+def test_pbs_find_jobs_match_parse_error(mock_check_output):
+    import qbatch.core
+
+    mock_check_output.return_value = """
+    <this is not xml
+    """
+
+    jobs = qbatch.core.pbs_find_jobs(["*"])
